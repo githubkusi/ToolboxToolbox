@@ -1,4 +1,4 @@
-function results = tbUseProject(name, varargin)
+function results = tbUseProject(name, persistentPrefs, varargin)
 % Find an existing project within the projectRoot, and deploy it.
 %
 % The goal here is to make it a one-liner to deploy a project by name,
@@ -15,7 +15,7 @@ function results = tbUseProject(name, varargin)
 %
 % 2016 benjamin.heasly@gmail.com
 
-[prefs, others] = tbParsePrefs(varargin{:});
+[prefs, others] = tbParsePrefs(persistentPrefs, varargin{:});
 
 parser = inputParser();
 parser.addRequired('name', @ischar);
@@ -50,4 +50,4 @@ if any(isProject)
     [config(isProject).toolboxRoot] = deal(projectParent);
 end
 
-results = tbDeployToolboxes('config', config, prefs);
+results = tbDeployToolboxes(persistentPrefs, 'config', config, prefs);
