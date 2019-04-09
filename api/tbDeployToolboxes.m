@@ -48,22 +48,24 @@ if isempty(config) || ~isstruct(config) || ~isfield(config, 'name')
     config = tbReadConfig(prefs);
 end
 
-%% Check whether TbTb itself is up-to-date, and report status
-self = tbToolboxRecord( ...
-    'toolboxRoot', fileparts(tbLocateSelf()), ...
-    'name', 'ToolboxToolbox', ...
-    'type', 'git');
-strategy = tbChooseStrategy(self, prefs);
-[flavor,flavorlong,originflavorlong] = strategy.detectFlavor(self);
-if (isempty(flavorlong))
-    if (prefs.verbose) fprintf(2,'Cannot detect local ToolboxToolbox revision number and thus cannot tell if it is up to date\n\n'); end
-elseif (isempty(originflavorlong))
-    if (prefs.verbose) fprintf(2,'Cannot detect ToolboxToolbox revision number on gitHub and thus cannot tell if local copy is up to date\n\n'); end
-elseif (strcmp(flavorlong,originflavorlong))
-    if (prefs.verbose) fprintf('Local copy of ToolboxToolbox is up to date.\n'); end
-else
-    if (prefs.verbose) fprintf(2,'Local copy of ToolboxToolbox out of date (or you made local modifications).\n'); end
-    if (prefs.verbose) fprintf(2,'Consider updating with git pull or otherwise synchronizing.\n\n'); end
+% Check whether TbTb itself is up-to-date, and report status
+if prefs.checkTbTb
+    self = tbToolboxRecord( ...
+        'toolboxRoot', fileparts(tbLocateSelf()), ...
+        'name', 'ToolboxToolbox', ...
+        'type', 'git');
+    strategy = tbChooseStrategy(self, prefs);
+    [~, flavorlong,originflavorlong] = strategy.detectFlavor(self);
+    if (isempty(flavorlong))
+        if (prefs.verbose), fprintf(2,'Cannot detect local ToolboxToolbox revision number and thus cannot tell if it is up to date\n\n'); end
+    elseif (isempty(originflavorlong))
+        if (prefs.verbose), fprintf(2,'Cannot detect ToolboxToolbox revision number on gitHub and thus cannot tell if local copy is up to date\n\n'); end
+    elseif (strcmp(flavorlong,originflavorlong))
+        if (prefs.verbose), fprintf('Local copy of ToolboxToolbox is up to date.\n'); end
+    else
+        if (prefs.verbose), fprintf(2,'Local copy of ToolboxToolbox out of date (or you made local modifications).\n'); end
+        if (prefs.verbose), fprintf(2,'Consider updating with git pull or otherwise synchronizing.\n\n'); end
+    end
 end
 
 %% Convert registered toolbox names to "include" records.
@@ -105,7 +107,7 @@ end
 
 
 %% Get or update the toolbox registry.
-registry = tbFetchRegistry(prefs, 'doUpdate', true);
+registry = tbFetchRegistry(prefs, 'doUpdate', prefs.updateRegistry);
 if 0 ~= registry.status
     registryPath = tbLocateToolbox(registry, prefs);
     if isempty(registryPath)
@@ -319,8 +321,20 @@ else
     hookPath = '';
 end
 
+% check whether template is newer than local hook, print a
+% red message if so.
+if (~isempty(hookPath) && templateExists)
+    hookInfo = dir(hookPath);
+    templateInfo = dir(templatePath);
+    if (datenum(templateInfo.date) > datenum(hookInfo.date))
+        fprintf(2,'  Local hook template more recent than local hook. Consider updating.\n');
+    else
+        % fprintf('  Local hook more recent than template, good.\n');
+    end
+end
+
 % invoke the local hook if it exists
-if ~isempty(hookPath);
+if ~isempty(hookPath)
     if (prefs.verbose) fprintf('  Running local hook "%s".\n', hookPath); end
     command = ['run ' hookPath];
     [record.status, record.message] = evalIsolated(command);

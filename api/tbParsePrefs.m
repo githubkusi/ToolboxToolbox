@@ -21,6 +21,8 @@ function [prefs, others] = tbParsePrefs(varargin)
 %
 %   - 'toolboxRoot' -- where to put/look for normal toolboxes
 %   - 'toolboxCommonRoot' -- where to look for "pre-installed" toolboxes
+%   - 'toolboxSubfolder' -- which subfolder of <toolboxRoot> to put/look
+%                           for normal toolboxes
 %   - 'projectRoot' -- where to look for non-toolbox projects
 %   - 'localHookFolder' -- where to look for local hooks for each toolbox
 %   - 'checkInternetCommand' -- system() command to check for connectivity
@@ -34,6 +36,12 @@ function [prefs, others] = tbParsePrefs(varargin)
 %   - 'remove' -- how to tbResetMatlabPath() before deployment
 %   - 'online' -- whether or not the Internet is reachable
 %   - 'verbose' -- print out or shut up?
+%   - 'checkTbTb' -- whether to check whether TbTb is up to date (logical, default true)
+%   - 'updateRegistry' -- whether to update TbRegistry (logical, default true)
+%   - 'update' -- whether to update all other toolboxes ('asspecified'/'never')
+%                 'asspecified' (default) follows what is specified in the
+%                 update field of the toolbox record. 'never' overrides
+%                 that field and does not update any of the toolboxes.
 %
 % 2016-2017 benjamin.heasly@gmail.com
 
@@ -42,6 +50,7 @@ parser.KeepUnmatched = true;
 parser.PartialMatching = false;
 parser.addParameter('toolboxRoot', tbGetPref('toolboxRoot', fullfile(tbUserFolder(), 'toolboxes')), @ischar);
 parser.addParameter('toolboxCommonRoot', tbGetPref('toolboxCommonRoot', '/srv/toolboxes'), @ischar);
+parser.addParameter('toolboxSubfolder', '', @ischar);
 parser.addParameter('projectRoot', tbGetPref('projectRoot', fullfile(tbUserFolder(), 'projects')), @ischar);
 parser.addParameter('localHookFolder', tbGetPref('localHookFolder', fullfile(tbUserFolder(), 'localHookFolder')), @ischar);
 parser.addParameter('checkInternetCommand', tbGetPref('checkInternetCommand', ''), @ischar);
@@ -50,11 +59,14 @@ parser.addParameter('configPath', tbGetPref('configPath', fullfile(tbUserFolder(
 parser.addParameter('asAssertion', false, @islogical);
 parser.addParameter('runLocalHooks', true, @islogical);
 parser.addParameter('addToPath', true, @islogical);
-parser.addParameter('reset', 'full', @(f) any(strcmp(f, {'full', 'no-matlab', 'no-self', 'bare', 'as-is'})));
+parser.addParameter('reset', tbGetPref('reset', 'full'), @(f) any(strcmp(f, {'full', 'no-matlab', 'no-self', 'bare', 'as-is'})));
 parser.addParameter('add', '', @ischar);
 parser.addParameter('remove', '', @ischar);
 parser.addParameter('online', logical([]), @islogical);
-parser.addParameter('verbose', true, @islogical);
+parser.addParameter('verbose', tbGetPref('verbose', true), @islogical);
+parser.addParameter('checkTbTb', tbGetPref('checkTbTb', true), @islogical);
+parser.addParameter('updateRegistry', tbGetPref('updateRegistry', true), @islogical);
+parser.addParameter('update', tbGetPref('update', 'asspecified'), @(f) (isempty(f) | any(strcmp(f, {'asspecified' 'never'}))));
 parser.parse(varargin{:});
 prefs = parser.Results;
 others = parser.Unmatched;
