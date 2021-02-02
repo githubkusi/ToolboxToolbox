@@ -1,9 +1,9 @@
 classdef Controller < handle
     %MODEL MVC Controller class for tbGui()
     %
-    %  SEE ALSO tbgui.View, tbgui.Model
+    %  SEE ALSO tbnewtoolbox.View, tbnewtoolbox.Model
     %
-    %  2020 Markus Leuthold githubkusi@titlis.org
+    %  2021 Markus Leuthold markus.leuthold@sonova.com
     
     properties
         model
@@ -27,21 +27,9 @@ classdef Controller < handle
             self.model.createToolbox(...
                 self.view.getShortDescription, ...
                 self.view.getSubfolder, ...
-                self.view.getDependencies)            
+                self.view.getDependencies, ...
+                self.view.getPathPlacement);
         end
-        
-        % function useAndClose(self, toolboxNames)
-        %     if tbGetPref(tbGetPersistentPrefs, 'verbose', true)
-        %         disp("selected: " + join(toolboxNames, ', '));
-        %     end
-        %     self.model.use(toolboxNames);
-        %     delete(self.view)
-        % end
-        %
-        % function copyToClipboardAndClose(self, selectedToolbox)
-        %     self.model.copyToClipboard(selectedToolbox);
-        %     delete(self.view)
-        % end
         
         function filteredToolboxNames = filterToolboxes(self, filterStr)
             filteredToolboxNames = self.model.filterToolboxes(filterStr);

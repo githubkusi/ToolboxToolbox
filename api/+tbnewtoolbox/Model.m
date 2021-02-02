@@ -1,13 +1,13 @@
 classdef Model < handle
     %MODEL MVC Model class for tbNewToolbox()
     %
-    %  SEE ALSO tbgui.View, tbgui.Controller
+    %  SEE ALSO tbnewtoolbox.View, tbnewtoolbox.Controller
     %
-    %  2020 Markus Leuthold githubkusi@titlis.org
+    %  2021 Markus Leuthold markus.leuthold@sonova.com
     
     properties
         toolboxNames
-        prefs        
+        prefs
         subfolder
     end
     
@@ -27,7 +27,7 @@ classdef Model < handle
         function self = Model
             [~, self.toolboxNames] = tbGetToolboxNames;
             self.prefs = tbParsePrefs(tbGetPersistentPrefs);
-        end        
+        end
         
         function tn = getNewToolboxName(self)
             gitRoot = self.getGitRoot;
@@ -78,13 +78,13 @@ classdef Model < handle
             end
         end
         
-        function wellFormedRecord = getMainRecord(self, toolboxName, url, subfolder)
+        function wellFormedRecord = getMainRecord(~, toolboxName, url, subfolder, pathPlacement)
             record.name = toolboxName;
             record.subfolder = subfolder;
             record.type = 'git';
             record.url = url;
-%             record.pathPlacement = self.PathplacementDropDown.Value;
-%             record.cdToFolder = self.cdToFolderEditField.Value;
+            record.pathPlacement = pathPlacement;
+            %             record.cdToFolder = self.cdToFolderEditField.Value;
             wellFormedRecord = tbToolboxRecord(record);
         end
         
@@ -116,12 +116,20 @@ classdef Model < handle
         end
         
         function writeRecords(~, records, filePath)
+            % create subfolders if needed
+            subfolder = fileparts(filePath);
+            if ~isfolder(subfolder)
+                disp(subfolder + " doesn't exist, create folder");
+                mkdir(subfolder);
+            end
+            disp("write config file to " + filePath)
             savejson('', records, filePath)
         end
         
         function createToolbox(self, shortDescription, subfolder, dependencies)
             gitRoot = self.getGitRoot;
             if isempty(gitRoot)
+                disp("No git repo exists in current folder, create a new one")
                 self.createLocalGitRepo
                 gitRoot = pwd;
             end
@@ -130,25 +138,8 @@ classdef Model < handle
             toolboxName = self.getCurrentToolboxName(gitRoot);
             records = self.getRecords(toolboxName, url, subfolder, dependencies);
             filePath = self.getConfigFilePath(toolboxName);
-            self.writeRecords(records, filePath)            
+            self.writeRecords(records, filePath)
         end
-        
-        
-        
-        
-        
-        
-        
-%         function use(self, toolboxNames)
-%             tbUse(toolboxNames, self.prefs);
-%         end
-%         
-%         function copyToClipboard(self, toolboxNames)
-%             toolboxStr = self.getToolboxesString(toolboxNames);
-%             str = ['tbUse(' toolboxStr ');'];
-%             disp(['copy "' str '" to clipboard']);
-%             clipboard('copy', str);
-%         end
         
         function filteredToolboxNames = filterToolboxes(self, filterStr)
             if isempty(filterStr)
