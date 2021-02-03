@@ -81,16 +81,16 @@ classdef Model < handle
             assert(~fail, 'CreateLocalGitRepo:BadGitInit', out)
         end
         
-        function url = createRemoteGitRepo(self, shortDescription, visibility, url, repoName)
+        function fullUrl = fullGithubUrl(~, url, repoName)
+            fullUrl = [url '/' repoName];
+        end
+        
+        function createRemoteGitRepo(self, shortDescription, visibility, url)
             self.checkGhInstallation
-            
-            fullRepo = [erase(url, 'https://') '/' repoName];
-            
-            cmd = ['gh repo create ' fullRepo ' -y -d "' shortDescription '" --' visibility];
+            ghUrl = erase(url, 'https://');
+            cmd = ['gh repo create ' ghUrl ' -y -d "' shortDescription '" --' visibility];
             [tf, out] = system(cmd);
             assert(tf == 0, """" + cmd + """ failed" + newline + out)
-            lines = split(strip(out));
-            url = lines{end};
         end
         
         function r = getToolboxRoot(self)
@@ -124,11 +124,11 @@ classdef Model < handle
         end
         
         function wellFormedRecords = getDependencyRecords(~, dependencies)
-            wellFormedRecords = tbToolboxRecord;
+            wellFormedRecords = [];
             for k = 1:length(dependencies)
                 record.name = strrep(dependencies{k}, '\', '/');
                 record.type = 'include';
-                wellFormedRecords(k) = tbToolboxRecord(record, 'pathPlacement', '');
+                wellFormedRecords = [wellFormedRecords tbToolboxRecord(record, 'pathPlacement', '')]; %#ok<AGROW>
             end
         end
         
@@ -158,10 +158,10 @@ classdef Model < handle
                 mkdir(subfolder);
             end
             disp("write config file to " + filePath)
-            savejson('', records, filePath)
+            savejson('', records, 'filename', filePath, 'SkipEmpty', true)
         end
         
-        function createToolbox(self, shortDescription, subfolder, dependencies, pathPlacement, visibility, url, repoName)
+        function createToolbox(self, shortDescription, subfolder, dependencies, pathPlacement, visibility, baseUrl, repoName)
             gitRoot = self.getGitRoot;
             if isempty(gitRoot)
                 disp("No git repo exists in current folder, create a new one")
@@ -169,7 +169,8 @@ classdef Model < handle
                 gitRoot = pwd;
             end
             
-            url = self.createRemoteGitRepo(shortDescription, visibility, url, repoName);
+            url = self.fullGithubUrl(baseUrl, repoName);
+            self.createRemoteGitRepo(shortDescription, visibility, url);
             toolboxName = self.getCurrentToolboxName(gitRoot);
             records = self.getRecords(toolboxName, url, subfolder, dependencies, pathPlacement);
             filePath = self.getConfigFilePath(toolboxName);
