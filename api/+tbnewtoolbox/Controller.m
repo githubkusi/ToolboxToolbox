@@ -18,7 +18,7 @@ classdef Controller < handle
         end
         
         function init(self)
-            self.view.init(self, self.model);          
+            self.view.init(self, self.model);
         end
         
         function createToolbox(self)
@@ -26,7 +26,10 @@ classdef Controller < handle
                 self.view.getShortDescription, ...
                 self.view.getSubfolder, ...
                 self.view.getDependencies, ...
-                self.view.getPathPlacement);
+                self.view.getPathPlacement, ...
+                self.view.getVisibility, ...
+                self.view.getGithubUrl, ...
+                self.view.getGithubRepoName);
         end
         
         function filteredToolboxNames = filterToolboxes(self, filterStr)
