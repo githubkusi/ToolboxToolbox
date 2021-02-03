@@ -18,9 +18,7 @@ classdef Controller < handle
         end
         
         function init(self)
-            self.view.init(self, self.model);
-            self.view.setToolboxNames(self.model.toolboxNames);
-            self.view.setNewToolboxName(self.model.getNewToolboxName);
+            self.view.init(self, self.model);          
         end
         
         function createToolbox(self)

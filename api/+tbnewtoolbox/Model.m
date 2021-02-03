@@ -21,12 +21,36 @@ classdef Model < handle
                 s = ['{''' x{1} '''}'];
             end
         end
+        
+        function cp = canonicalPath(~, p)
+            % make path strings unambigous, comparable and printable
+            cp = strrep(p, '\', '/');
+        end
     end
     
     methods
         function self = Model
             [~, self.toolboxNames] = tbGetToolboxNames;
             self.prefs = tbParsePrefs(tbGetPersistentPrefs);
+            toolboxRoot = self.getToolboxRoot;
+            isUnderToolboxRoot = startsWith(self.canonicalPath(pwd), toolboxRoot, 'IgnoreCase', true);
+            assert(isUnderToolboxRoot, 'tbNewToolbox:NotUnderToolboxRoot', ...
+                "Your new toolbox needs to be located under the current toolbox root " + toolboxRoot)
+        end
+        
+        function s = getGithubUrls(~)
+            s = getpref('ToolboxToolbox', 'NewToolbox').GithubUrls;
+        end
+        
+        function s = getDefaultGithubVisibility(~)
+            pref = getpref('ToolboxToolbox', 'NewToolbox');
+            if isfield(pref, 'DefaultGithubVisibility')
+                s = pref.DefaultGithubVisibility;
+                assert(ismember(s, {'private' 'public' 'internal'}), ...
+                    'NewToolbox:BadDefaultVisibility', 'default visibiliy needs to be one of private, public, internal')
+            else
+                s = 'public';
+            end
         end
         
         function tn = getNewToolboxName(self)
@@ -40,7 +64,7 @@ classdef Model < handle
             tn = self.getCurrentToolboxName(gitRoot);
         end
         
-        function checkHubInstallation(~)
+        function checkGhInstallation(~)
             cmd = 'hub --version';
             [~, out] = system(cmd);
             assert(contains(out, 'hub version'), 'tbtb:HubNotFound', ...
@@ -61,9 +85,12 @@ classdef Model < handle
             url = lines{end};
         end
         
-        function toolboxName = getCurrentToolboxName(~, currentRoot)
-            toolboxRoot = strrep(tbGetPersistentPrefs().toolboxRoot, '\', '/');
-            toolboxName = erase(strrep(currentRoot, '\', '/'), toolboxRoot);
+        function r = getToolboxRoot(self)
+            r = self.canonicalPath(tbGetPersistentPrefs().toolboxRoot);
+        end
+        
+        function toolboxName = getCurrentToolboxName(self, currentRoot)
+            toolboxName = erase(strrep(currentRoot, '\', '/'), self.getToolboxRoot);
             
             % delete leading slash
             toolboxName = regexprep(toolboxName, '^/', '');
@@ -97,8 +124,8 @@ classdef Model < handle
             end
         end
         
-        function records = getRecords(self, toolboxName, url, subfolder, dependencies)
-            mainRecord = self.getMainRecord(toolboxName, url, subfolder);
+        function records = getRecords(self, toolboxName, url, subfolder, dependencies, pathPlacement)
+            mainRecord = self.getMainRecord(toolboxName, url, subfolder, pathPlacement);
             dependencyRecords = self.getDependencyRecords(dependencies);
             records = [mainRecord, dependencyRecords];
         end
@@ -126,7 +153,7 @@ classdef Model < handle
             savejson('', records, filePath)
         end
         
-        function createToolbox(self, shortDescription, subfolder, dependencies)
+        function createToolbox(self, shortDescription, subfolder, dependencies, pathPlacement)
             gitRoot = self.getGitRoot;
             if isempty(gitRoot)
                 disp("No git repo exists in current folder, create a new one")
@@ -136,7 +163,7 @@ classdef Model < handle
             
             url = self.createRemoteGitRepo(shortDescription);
             toolboxName = self.getCurrentToolboxName(gitRoot);
-            records = self.getRecords(toolboxName, url, subfolder, dependencies);
+            records = self.getRecords(toolboxName, url, subfolder, dependencies, pathPlacement);
             filePath = self.getConfigFilePath(toolboxName);
             self.writeRecords(records, filePath)
         end
@@ -149,6 +176,25 @@ classdef Model < handle
             end
             idx = ~cellfun(@isempty, regexpi(self.toolboxNames, filterStr));
             filteredToolboxNames = self.toolboxNames(idx);
+        end
+        
+        function s = getPlannedActions(self)
+            % local git repo
+            s = "Current working folder: " + pwd;
+            gitRoot = self.getGitRoot;
+            if isempty(gitRoot)
+                gitRoot = pwd;
+                s = [s "No git repo exists in current folder, create new git local repo in " + pwd];
+            else
+                s = [s "git repo present in current working folder"];
+            end
+            
+            % remote git repo
+            toolboxName = self.getCurrentToolboxName(gitRoot);
+            s = [s "Create repo " + toolboxName + " on Github"];
+            
+            % config file
+            s = [s "Create config file in " + self.getConfigFilePath(toolboxName)];
         end
     end
 end
